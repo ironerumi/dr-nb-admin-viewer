@@ -105,6 +105,7 @@ function ensureTrailingSlash(value: string): string {
 
 const API_V2_BASE_URL = new URL(ensureTrailingSlash(rawEndpoint));
 const HOST_BASE_URL = new URL("/", API_V2_BASE_URL);
+export const DATAROBOT_HOST_BASE_URL = HOST_BASE_URL.origin;
 const DEFAULT_LIMIT = 50;
 const MAX_RETRIES = 3;
 const MAX_CONCURRENT_REQUESTS = 5;

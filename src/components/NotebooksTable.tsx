@@ -50,7 +50,29 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => row.getValue("useCaseName") || "-",
+        cell: ({ row }) => {
+          const useCaseName = row.original.useCaseName;
+          const useCaseUrl = row.original.useCaseUrl;
+
+          if (!useCaseName) {
+            return "-";
+          }
+
+          if (!useCaseUrl) {
+            return useCaseName;
+          }
+
+          return (
+            <a
+              href={useCaseUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-sky-600 underline underline-offset-2 hover:text-sky-500 dark:text-sky-400"
+            >
+              {useCaseName}
+            </a>
+          );
+        },
       },
       {
         accessorKey: "name",
@@ -64,6 +86,28 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
+        cell: ({ row }) => {
+          const { name, notebookUrl } = row.original;
+
+          if (!name) {
+            return "-";
+          }
+
+          if (!notebookUrl) {
+            return name;
+          }
+
+          return (
+            <a
+              href={notebookUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-sky-600 underline underline-offset-2 hover:text-sky-500 dark:text-sky-400"
+            >
+              {name}
+            </a>
+          );
+        },
       },
       {
         accessorKey: "type",

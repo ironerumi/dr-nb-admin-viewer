@@ -1,4 +1,4 @@
-import { fetchAllUseCases, fetchAllNotebooksForAllUseCases, type Notebook, type UseCase } from "./src/api/datarobot";
+import { fetchAllUseCases, fetchAllNotebooksForAllUseCases, DATAROBOT_HOST_BASE_URL, type Notebook, type UseCase } from "./src/api/datarobot";
 import indexHtml from "./index.html";
 
 const apiToken = process.env.DATAROBOT_API_TOKEN;
@@ -50,10 +50,18 @@ Bun.serve({
 
           const useCaseMap = new Map(useCases.map(uc => [uc.id, uc.name]));
 
-          const enrichedNotebooks = notebooks.map(notebook => ({
-            ...notebook,
-            useCaseName: useCaseMap.get(notebook.useCaseId) || "Unknown",
-          }));
+          const enrichedNotebooks = notebooks.map(notebook => {
+            const useCaseName = useCaseMap.get(notebook.useCaseId) || "Unknown";
+            const useCaseUrl = `${DATAROBOT_HOST_BASE_URL}/usecases/${encodeURIComponent(notebook.useCaseId)}`;
+            const notebookUrl = `${useCaseUrl}/notebooks/${encodeURIComponent(notebook.id)}`;
+
+            return {
+              ...notebook,
+              useCaseName,
+              useCaseUrl,
+              notebookUrl,
+            };
+          });
 
           const codespaceCount = notebooks.filter(n => n.type === "codespace").length;
           const notebookCount = notebooks.filter(n => n.type === "notebook").length;

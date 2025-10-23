@@ -29,6 +29,8 @@ export interface Notebook {
   description: string | null;
   useCaseId: string;
   useCaseName?: string;
+  useCaseUrl?: string;
+  notebookUrl?: string;
   created: NotebookTimestamp;
   updated: NotebookTimestamp;
   lastViewed: NotebookTimestamp;
