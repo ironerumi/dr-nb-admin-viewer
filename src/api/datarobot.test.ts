@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from "bun:test";
-import { getDatasets } from "./datarobot";
+import { fetchDatasets } from "./datarobot";
 
 describe("DataRobot API Connectivity", () => {
   let apiToken: string;
@@ -12,7 +12,7 @@ describe("DataRobot API Connectivity", () => {
   });
 
   test("should successfully connect to DataRobot datasets API", async () => {
-    const response = await getDatasets(apiToken);
+    const response = await fetchDatasets(apiToken);
     
     expect(response).toBeDefined();
     expect(response.totalCount).toBeGreaterThan(0);
@@ -21,7 +21,7 @@ describe("DataRobot API Connectivity", () => {
   }, 10000);
 
   test("should return valid dataset structure", async () => {
-    const response = await getDatasets(apiToken);
+    const response = await fetchDatasets(apiToken);
     
     const firstDataset = response.data[0];
     expect(firstDataset).toBeDefined();
@@ -38,7 +38,7 @@ describe("DataRobot API Connectivity", () => {
   }, 15000);
 
   test("should handle pagination metadata", async () => {
-    const response = await getDatasets(apiToken);
+    const response = await fetchDatasets(apiToken);
     
     expect(response.count).toBeDefined();
     expect(typeof response.count).toBe("number");
@@ -50,7 +50,7 @@ describe("DataRobot API Connectivity", () => {
 
   test("should throw error with invalid token", async () => {
     expect(async () => {
-      await getDatasets("invalid-token");
+      await fetchDatasets("invalid-token");
     }).toThrow();
   });
 });

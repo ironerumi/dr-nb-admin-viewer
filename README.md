@@ -1,15 +1,151 @@
-# dr-nb-admin-viewer
+# DataRobot Notebook Admin Viewer
 
-To install dependencies:
+A web-based admin tool for viewing and managing DataRobot Notebooks and Codespaces across all use cases.
+
+![Tech Stack](https://img.shields.io/badge/Bun-000000?style=flat&logo=bun&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+
+## Features
+
+- 📊 **Data Table** - View all notebooks and codespaces with 12 detailed columns
+- 🔍 **Filtering** - Quick filters for codespaces, inactive items, and running sessions
+- 📈 **Sorting** - Sort by any column (UC name, creator, dates, etc.)
+- 📄 **Pagination** - Browse through 100 items per page
+- 🎨 **Modern UI** - Built with shadcn/ui components and Tailwind CSS
+- ⚡ **Fast** - Powered by Bun with 5-minute data caching
+
+## Prerequisites
+
+- [Bun](https://bun.sh) v1.3.1 or later
+- DataRobot API token
+
+## Setup
+
+1. **Install dependencies:**
+   ```bash
+   bun install
+   ```
+
+2. **Configure environment:**
+   
+   Create a `.env` file in the project root:
+   ```bash
+   DATAROBOT_API_TOKEN=your_api_token_here
+   ```
+
+3. **Build CSS:**
+   ```bash
+   bun run build:css
+   ```
+
+## Usage
+
+### Development Mode
+
+Start the development server with hot reload:
 
 ```bash
-bun install
+bun run dev
 ```
 
-To run:
+Then open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Production Mode
 
 ```bash
-bun run index.ts
+bun run start
 ```
 
-This project was created using `bun init` in bun v1.3.1. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `bun run dev` | Start development server with hot reload |
+| `bun run start` | Start production server |
+| `bun run build:css` | Compile Tailwind CSS |
+| `bun run watch:css` | Watch and compile CSS on changes |
+| `bun test` | Run tests |
+
+## Project Structure
+
+```
+dr-nb-admin-viewer/
+├── index.ts                 # Bun server + API
+├── index.html              # Entry point
+├── src/
+│   ├── App.tsx             # Main React component
+│   ├── components/         # React components
+│   │   ├── NotebooksTable.tsx
+│   │   ├── FilterCheckboxes.tsx
+│   │   ├── CountDisplay.tsx
+│   │   └── ui/             # shadcn/ui components
+│   ├── api/                # DataRobot API client
+│   ├── styles/             # CSS files
+│   └── types/              # TypeScript types
+└── reference/              # Design mockups & data samples
+```
+
+## Features Overview
+
+### Data Table Columns
+
+| Column | Description |
+|--------|-------------|
+| UC名 | Use Case name |
+| 名前 | Notebook/Codespace name |
+| タイプ | Type (notebook/codespace) |
+| ステータス | Session status (running/stopped) |
+| 作成者 | Creator username |
+| 作成時間 | Creation date |
+| 閲覧者 | Last viewer username |
+| 閲覧日時 | Last viewed date |
+| 編集者 | Last editor username |
+| 編集日時 | Last updated date |
+| 定期実行 | Has schedule (はい/いいえ) |
+| 定期実行有効 | Schedule enabled (はい/いいえ) |
+
+### Filters
+
+- **Codespaceのみ** - Show only codespaces
+- **1ヶ月以上未使用** - Show items not viewed in over 30 days
+- **使用中** - Show only items with running sessions
+
+Filters can be combined and work cumulatively.
+
+## API Endpoint
+
+The server exposes a REST API endpoint:
+
+**GET** `/api/notebooks`
+
+Returns:
+```json
+{
+  "total": 42,
+  "codespaceCount": 35,
+  "notebookCount": 7,
+  "data": [...]
+}
+```
+
+Data is cached for 5 minutes to reduce load on DataRobot API.
+
+## Documentation
+
+For detailed implementation documentation, see [IMPLEMENTATION.md](./IMPLEMENTATION.md).
+
+## Tech Stack
+
+- **Runtime:** [Bun](https://bun.sh) - Fast all-in-one JavaScript runtime
+- **Framework:** [React 19](https://react.dev) - UI library
+- **Language:** [TypeScript 5](https://www.typescriptlang.org) - Type safety
+- **Styling:** [Tailwind CSS 3](https://tailwindcss.com) - Utility-first CSS
+- **UI Components:** [shadcn/ui](https://ui.shadcn.com) - Re-usable components
+- **Table:** [TanStack Table](https://tanstack.com/table) - Headless table library
+- **Icons:** [Lucide React](https://lucide.dev) - Icon library
+
+## License
+
+Private project - All rights reserved
