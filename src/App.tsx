@@ -4,7 +4,7 @@ import { NotebooksTable } from "./components/NotebooksTable";
 import { FilterCheckboxes, FilterState } from "./components/FilterCheckboxes";
 import { CountDisplay } from "./components/CountDisplay";
 import { MorphingSquare } from "./components/ui/loading";
-import "./styles/output.css";
+import "./styles/tailwind.css";
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
