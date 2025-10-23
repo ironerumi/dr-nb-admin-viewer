@@ -13,6 +13,7 @@ A web-based admin tool for viewing and managing DataRobot Notebooks and Codespac
 - 🔍 **Filtering** - Quick filters for codespaces, inactive items, and running sessions
 - 📈 **Sorting** - Sort by any column (UC name, creator, dates, etc.)
 - 📄 **Pagination** - Browse through 100 items per page
+- 📥 **Export Controls** - Copy or download the current table view as CSV with link columns
 - 🎨 **Modern UI** - Built with shadcn/ui components and Tailwind CSS
 - ⚡ **Fast** - Powered by Bun with 5-minute data caching
 
@@ -111,6 +112,14 @@ dr-nb-admin-viewer/
 | 編集日時 | Last updated date |
 | 定期実行 | Has schedule (はい/いいえ) |
 | 定期実行有効 | Schedule enabled (はい/いいえ) |
+
+### Copy & Download CSV
+
+- Two buttons above the table let you copy the current page or download it as `list.csv`.
+- The exported data includes all visible columns plus two additional fields:
+  - `UC名_link` – direct URL to the use case when available.
+  - `名前_link` – direct URL to the notebook/codespace when available.
+- Copied CSV briefly shows a `Copied` state for feedback before reverting to `Copy`.
 
 ### Filters
 

@@ -46,6 +46,7 @@ A web-based admin tool for viewing and managing DataRobot Notebooks and Codespac
 - Pagination at 100 items per page
 - Date formatting to YYYY-MM-DD
 - Boolean formatting to はい/いいえ
+- Copy/Download button group (shadcn ButtonGroup) exports the current page as CSV, adding `UC名_link` and `名前_link` columns and showing transient "Copied" feedback
 
 **`src/components/CountDisplay.tsx`**
 - Static count display (not affected by filters)
@@ -254,7 +255,12 @@ bun run start
    - Hover states on table rows
    - Disabled state for pagination buttons
 
-5. **Backend**
+5. **CSV Export Controls**
+   - Copy and download buttons above the table
+   - CSV includes additional `UC名_link` and `名前_link` columns when URLs exist
+   - Copy action shows temporary "Copied" state for feedback
+
+6. **Backend**
    - RESTful API endpoint
    - 5-minute data caching
    - Use case name enrichment
@@ -297,7 +303,7 @@ Each notebook includes:
 
 - [ ] Server-side filtering and pagination
 - [ ] Real-time data updates via WebSocket
-- [ ] Export to CSV/Excel
+- [ ] Export to Excel (CSV export via copy/download is implemented)
 - [ ] Advanced search functionality
 - [ ] User preferences persistence
 - [ ] Bulk operations (delete, stop sessions)
