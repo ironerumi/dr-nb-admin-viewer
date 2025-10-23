@@ -142,7 +142,7 @@ Data is cached for 5 minutes to reduce load on DataRobot API.
 
 ## Documentation
 
-For detailed implementation documentation, see [IMPLEMENTATION.md](./IMPLEMENTATION.md).
+For detailed implementation documentation, see [IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).
 
 ## Tech Stack
 

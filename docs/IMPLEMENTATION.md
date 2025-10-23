@@ -201,7 +201,7 @@ dr-nb-admin-viewer/
 │   ├── mockup.png                    # Design mockup
 │   ├── notebooks-data.json           # Exported notebook data
 │   └── usecases-data.json            # Exported use case data
-└── IMPLEMENTATION.md                 # This file
+└── docs/IMPLEMENTATION.md             # This file
 ```
 
 ## Usage
