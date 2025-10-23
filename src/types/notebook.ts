@@ -33,7 +33,6 @@ export interface Notebook {
   notebookUrl?: string;
   created: NotebookTimestamp;
   updated: NotebookTimestamp;
-  lastViewed: NotebookTimestamp;
   session?: NotebookSession;
   hasSchedule: boolean;
   hasEnabledSchedule: boolean;

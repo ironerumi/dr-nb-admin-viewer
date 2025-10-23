@@ -9,7 +9,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
-import { Notebook } from "../types/notebook";
+import type { Notebook } from "../types/notebook";
 import { Button } from "./ui/button";
 import {
   Table,
@@ -24,9 +24,18 @@ interface NotebooksTableProps {
   data: Notebook[];
 }
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) {
+    return "-";
+  }
+
   const date = new Date(dateString);
-  return date.toISOString().split("T")[0];
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  const iso = date.toISOString();
+  return iso.length >= 10 ? iso.slice(0, 10) : iso;
 };
 
 const formatBoolean = (value: boolean): string => {
@@ -137,60 +146,18 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
         cell: ({ row }) => row.original.session?.status || "-",
       },
       {
-        accessorKey: "created.by.username",
+        accessorKey: "updated.at",
         header: ({ column }) => (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="hover:bg-transparent p-0"
           >
-            作成者
+            編集日時
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => row.original.created.by.username,
-      },
-      {
-        accessorKey: "created.at",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent p-0"
-          >
-            作成時間
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        ),
-        cell: ({ row }) => formatDate(row.original.created.at),
-      },
-      {
-        accessorKey: "lastViewed.by.username",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent p-0"
-          >
-            閲覧者
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        ),
-        cell: ({ row }) => row.original.lastViewed.by.username,
-      },
-      {
-        accessorKey: "lastViewed.at",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent p-0"
-          >
-            閲覧日時
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        ),
-        cell: ({ row }) => formatDate(row.original.lastViewed.at),
+        cell: ({ row }) => formatDate(row.original.updated?.at),
       },
       {
         accessorKey: "updated.by.username",
@@ -207,18 +174,32 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
         cell: ({ row }) => row.original.updated.by.username,
       },
       {
-        accessorKey: "updated.at",
+        accessorKey: "created.at",
         header: ({ column }) => (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="hover:bg-transparent p-0"
           >
-            編集日時
+            作成時間
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => formatDate(row.original.updated.at),
+        cell: ({ row }) => formatDate(row.original.created?.at),
+      },
+      {
+        accessorKey: "created.by.username",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="hover:bg-transparent p-0"
+          >
+            作成者
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => row.original.created.by.username,
       },
       {
         accessorKey: "hasSchedule",

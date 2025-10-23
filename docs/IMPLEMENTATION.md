@@ -31,17 +31,15 @@ A web-based admin tool for viewing and managing DataRobot Notebooks and Codespac
 
 **`src/components/NotebooksTable.tsx`**
 - Data table using TanStack React Table
-- 12 columns with Japanese labels:
+- 10 columns with Japanese labels:
   - UC名 (Use Case Name)
   - 名前 (Name)
   - タイプ (Type)
   - ステータス (Status)
-  - 作成者 (Creator)
-  - 作成時間 (Created At)
-  - 閲覧者 (Viewer)
-  - 閲覧日時 (Last Viewed)
-  - 編集者 (Editor)
   - 編集日時 (Updated At)
+  - 編集者 (Editor)
+  - 作成時間 (Created At)
+  - 作成者 (Creator)
   - 定期実行 (Has Schedule)
   - 定期実行有効 (Has Enabled Schedule)
 - All columns sortable (sorts full dataset, not just current page)
@@ -58,7 +56,7 @@ A web-based admin tool for viewing and managing DataRobot Notebooks and Codespac
 **`src/components/FilterCheckboxes.tsx`**
 - Three filter checkboxes with Japanese labels:
   1. **Codespaceのみ**: Filters to show only items where `type === "codespace"`
-  2. **1ヶ月以上未使用**: Filters items where `lastViewed.at` is more than 30 days old
+  2. **1ヶ月以上未使用**: Filters items where `updated.at` is more than 30 days old
   3. **使用中**: Filters to show only items where `session.status === "running"`
 - Filters are cumulative (AND logic)
 
@@ -234,7 +232,7 @@ bun run start
 ### ✅ Implemented
 
 1. **Data Table**
-   - 12 columns with Japanese labels
+   - 10 columns with Japanese labels
    - All columns sortable
    - 100 items per page
    - Date formatting (YYYY-MM-DD)
@@ -283,7 +281,7 @@ DATAROBOT_API_TOKEN=your_token_here
 Each notebook includes:
 - Basic info: id, name, type, description
 - Use case: useCaseId, useCaseName (enriched)
-- Timestamps: created, updated, lastViewed (with user info)
+- Timestamps: created, updated (with user info)
 - Session: status, startedAt (if exists)
 - Scheduling: hasSchedule, hasEnabledSchedule
 

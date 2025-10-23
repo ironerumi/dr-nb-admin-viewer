@@ -9,7 +9,7 @@ A web-based admin tool for viewing and managing DataRobot Notebooks and Codespac
 
 ## Features
 
-- 📊 **Data Table** - View all notebooks and codespaces with 12 detailed columns
+- 📊 **Data Table** - View all notebooks and codespaces with 10 detailed columns
 - 🔍 **Filtering** - Quick filters for codespaces, inactive items, and running sessions
 - 📈 **Sorting** - Sort by any column (UC name, creator, dates, etc.)
 - 📄 **Pagination** - Browse through 100 items per page
@@ -107,8 +107,6 @@ dr-nb-admin-viewer/
 | ステータス | Session status (running/stopped) |
 | 作成者 | Creator username |
 | 作成時間 | Creation date |
-| 閲覧者 | Last viewer username |
-| 閲覧日時 | Last viewed date |
 | 編集者 | Last editor username |
 | 編集日時 | Last updated date |
 | 定期実行 | Has schedule (はい/いいえ) |
@@ -117,7 +115,7 @@ dr-nb-admin-viewer/
 ### Filters
 
 - **Codespaceのみ** - Show only codespaces
-- **1ヶ月以上未使用** - Show items not viewed in over 30 days
+- **1ヶ月以上未使用** - Show items not updated in over 30 days
 - **使用中** - Show only items with running sessions
 
 Filters can be combined and work cumulatively.

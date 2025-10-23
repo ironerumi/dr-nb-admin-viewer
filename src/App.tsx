@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Notebook, NotebooksResponse } from "./types/notebook";
+import type { Notebook, NotebooksResponse } from "./types/notebook";
 import { NotebooksTable } from "./components/NotebooksTable";
-import { FilterCheckboxes, FilterState } from "./components/FilterCheckboxes";
+import { FilterCheckboxes, type FilterState } from "./components/FilterCheckboxes";
 import { CountDisplay } from "./components/CountDisplay";
 import { MorphingSquare } from "./components/ui/loading";
 import "./styles/tailwind.css";
@@ -43,8 +43,8 @@ export const App: React.FC = () => {
     if (filters.oneMonthOld) {
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      const lastViewedDate = new Date(notebook.lastViewed.at);
-      if (lastViewedDate >= oneMonthAgo) {
+      const updatedDate = new Date(notebook.updated.at);
+      if (updatedDate >= oneMonthAgo) {
         return false;
       }
     }

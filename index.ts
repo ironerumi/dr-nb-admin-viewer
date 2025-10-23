@@ -1,12 +1,20 @@
-import { fetchAllUseCases, fetchAllNotebooksForAllUseCases, DATAROBOT_HOST_BASE_URL, type Notebook, type UseCase } from "./src/api/datarobot";
+import {
+  fetchAllUseCases,
+  fetchAllNotebooksForAllUseCases,
+  DATAROBOT_HOST_BASE_URL,
+  type Notebook,
+  type UseCase,
+} from "./src/api/datarobot";
 import indexHtml from "./index.html";
 
-const apiToken = process.env.DATAROBOT_API_TOKEN;
+const envApiToken = process.env.DATAROBOT_API_TOKEN;
 
-if (!apiToken) {
+if (!envApiToken) {
   console.error("Error: DATAROBOT_API_TOKEN not found in .env file");
-  process.exit(1);
+  throw new Error("DATAROBOT_API_TOKEN is required");
 }
+
+const apiToken = envApiToken;
 
 let cachedData: {
   notebooks: Notebook[];
@@ -55,8 +63,10 @@ Bun.serve({
             const useCaseUrl = `${DATAROBOT_HOST_BASE_URL}/usecases/${encodeURIComponent(notebook.useCaseId)}`;
             const notebookUrl = `${useCaseUrl}/notebooks/${encodeURIComponent(notebook.id)}`;
 
+            const { lastViewed, ...rest } = notebook;
+
             return {
-              ...notebook,
+              ...rest,
               useCaseName,
               useCaseUrl,
               notebookUrl,
