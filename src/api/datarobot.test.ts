@@ -3,11 +3,17 @@ import { fetchDatasets } from "./datarobot";
 
 describe("DataRobot API Connectivity", () => {
   let apiToken: string;
+  let apiEndpoint: string;
 
   beforeAll(() => {
     apiToken = process.env.DATAROBOT_API_TOKEN ?? "";
     if (!apiToken) {
       throw new Error("DATAROBOT_API_TOKEN not found in environment variables");
+    }
+
+    apiEndpoint = process.env.DATAROBOT_ENDPOINT ?? "";
+    if (!apiEndpoint) {
+      throw new Error("DATAROBOT_ENDPOINT not found in environment variables");
     }
   });
 

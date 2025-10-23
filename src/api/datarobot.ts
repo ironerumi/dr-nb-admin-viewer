@@ -93,13 +93,24 @@ export interface Notebook {
   hasEnabledSchedule: boolean;
 }
 
-const BASE_URL = "https://app.datarobot.com";
+const rawEndpoint = process.env.DATAROBOT_ENDPOINT;
+
+if (!rawEndpoint) {
+  throw new Error("DATAROBOT_ENDPOINT not found in environment variables");
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+const API_V2_BASE_URL = new URL(ensureTrailingSlash(rawEndpoint));
+const HOST_BASE_URL = new URL("/", API_V2_BASE_URL);
 const DEFAULT_LIMIT = 50;
 const MAX_RETRIES = 3;
 const MAX_CONCURRENT_REQUESTS = 5;
 
 export async function fetchDatasets(apiToken: string): Promise<DatasetResponse> {
-  const response = await fetch(`${BASE_URL}/api/v2/datasets/`, {
+  const response = await fetch(new URL("datasets/", API_V2_BASE_URL), {
     method: "GET",
     headers: {
       "Authorization": `Bearer ${apiToken}`,
@@ -119,7 +130,7 @@ export async function fetchUseCases(
   offset: number = 0,
   limit: number = DEFAULT_LIMIT
 ): Promise<UseCaseResponse> {
-  const url = new URL(`${BASE_URL}/api/v2/useCases/`);
+  const url = new URL("useCases/", API_V2_BASE_URL);
   url.searchParams.set("includeModelsCount", "false");
   url.searchParams.set("offset", offset.toString());
   url.searchParams.set("limit", limit.toString());
@@ -147,7 +158,7 @@ export async function fetchNotebooks(
   offset: number = 0,
   limit: number = DEFAULT_LIMIT
 ): Promise<NotebookResponse> {
-  const url = new URL(`${BASE_URL}/api-gw/nbx/notebooks/`);
+  const url = new URL("api-gw/nbx/notebooks/", HOST_BASE_URL);
   url.searchParams.set("useCaseId", useCaseId);
   url.searchParams.set("offset", offset.toString());
   url.searchParams.set("limit", limit.toString());
