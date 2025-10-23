@@ -6,6 +6,7 @@ import {
   getPaginationRowModel,
   flexRender,
   type ColumnDef,
+  type ColumnSizingState,
   type SortingState,
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
@@ -44,11 +45,15 @@ const formatBoolean = (value: boolean): string => {
 
 export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({});
 
   const columns = useMemo<ColumnDef<Notebook>[]>(
     () => [
       {
         accessorKey: "useCaseName",
+        size: 240,
+        minSize: 160,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -76,7 +81,8 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
               href={useCaseUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-sky-600 underline underline-offset-2 hover:text-sky-500 dark:text-sky-400"
+              className="truncate text-sky-600 underline underline-offset-2 hover:text-sky-500 dark:text-sky-400"
+              title={useCaseName}
             >
               {useCaseName}
             </a>
@@ -85,6 +91,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "name",
+        size: 240,
+        minSize: 160,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -111,7 +120,8 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
               href={notebookUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-sky-600 underline underline-offset-2 hover:text-sky-500 dark:text-sky-400"
+              className="truncate text-sky-600 underline underline-offset-2 hover:text-sky-500 dark:text-sky-400"
+              title={name}
             >
               {name}
             </a>
@@ -120,6 +130,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "type",
+        size: 160,
+        minSize: 120,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -133,6 +146,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "session.status",
+        size: 160,
+        minSize: 120,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -147,6 +163,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "updated.at",
+        size: 170,
+        minSize: 140,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -161,6 +180,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "updated.by.username",
+        size: 180,
+        minSize: 140,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -175,6 +197,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "created.at",
+        size: 170,
+        minSize: 140,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -189,6 +214,9 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "created.by.username",
+        size: 180,
+        minSize: 140,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -203,6 +231,10 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "hasSchedule",
+        size: 140,
+        minSize: 120,
+        maxSize: 220,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -217,6 +249,10 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
       },
       {
         accessorKey: "hasEnabledSchedule",
+        size: 160,
+        minSize: 120,
+        maxSize: 240,
+        enableResizing: true,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -240,8 +276,12 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
+    onColumnSizingChange: setColumnSizing,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
     state: {
       sorting,
+      columnSizing,
     },
     initialState: {
       pagination: {
@@ -250,23 +290,61 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
     },
   });
 
+  const totalTableWidth = table.getTotalSize();
+
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
-        <Table>
+        <Table
+          style={{
+            width: `${totalTableWidth}px`,
+            tableLayout: "fixed",
+          }}
+        >
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const minSize = header.column.columnDef.minSize;
+                  const maxSize = header.column.columnDef.maxSize;
+
+                  return (
+                    <TableHead
+                      key={header.id}
+                      className="relative"
+                      style={{
+                        width: `${header.getSize()}px`,
+                        minWidth: typeof minSize === "number" ? `${minSize}px` : undefined,
+                        maxWidth: typeof maxSize === "number" ? `${maxSize}px` : undefined,
+                      }}
+                    >
+                      {header.isPlaceholder ? null : (
+                        <>
+                          <div className="flex h-full min-w-0 items-center pr-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                          </div>
+                          {header.column.getCanResize() ? (
+                            <div
+                              role="separator"
+                              aria-orientation="vertical"
+                              aria-label="Resize column"
+                              onMouseDown={header.getResizeHandler()}
+                              onTouchStart={header.getResizeHandler()}
+                              className={`absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize select-none touch-none transition-colors ${
+                                header.column.getIsResizing()
+                                  ? "bg-border"
+                                  : "bg-transparent hover:bg-border"
+                              }`}
+                            />
+                          ) : null}
+                        </>
+                      )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -274,14 +352,34 @@ export const NotebooksTable: React.FC<NotebooksTableProps> = ({ data }) => {
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const minSize = cell.column.columnDef.minSize;
+                    const maxSize = cell.column.columnDef.maxSize;
+                    const cellValue = cell.getValue();
+
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          width: `${cell.column.getSize()}px`,
+                          minWidth: typeof minSize === "number" ? `${minSize}px` : undefined,
+                          maxWidth: typeof maxSize === "number" ? `${maxSize}px` : undefined,
+                        }}
+                      >
+                        <div
+                          className="block max-w-full truncate"
+                          title={
+                            typeof cellValue === "string" ? cellValue : undefined
+                          }
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </div>
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (
