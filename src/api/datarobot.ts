@@ -162,9 +162,6 @@ export async function fetchUseCases(
   url.searchParams.set("orderBy", "name");
   url.searchParams.set("showOrgUseCases", "true");
 
-  console.log(`🌐 Fetching use cases from: ${url.toString()}`);
-  console.log(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
-
   const endpoint = url.toString();
   const response = await fetch(endpoint, {
     method: "GET",
@@ -199,9 +196,6 @@ export async function fetchNotebooks(
   url.searchParams.set("limit", limit.toString());
   url.searchParams.set("orderBy", "-updated");
 
-  console.debug(`🌐 Fetching notebooks from: ${url.toString()}`);
-  console.debug(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
-
   const endpoint = url.toString();
   const response = await fetch(endpoint, {
     method: "GET",
@@ -215,7 +209,6 @@ export async function fetchNotebooks(
     console.error(`❌ API Error Details:`);
     console.error(`   Status: ${response.status} - ${response.statusText}`);
     console.error(`   URL: ${endpoint}`);
-    console.error(`   Token prefix: ${apiToken.substring(0, 10)}...`);
     const errorBody = await response.text().catch(() => "Unable to read error body");
     console.error(`   Response body: ${errorBody}`);
     throw await makeUpstreamError(response, endpoint, errorBody);

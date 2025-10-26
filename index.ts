@@ -20,7 +20,7 @@ const envApiToken = process.env.DATAROBOT_API_TOKEN;
 console.log("🔍 Server Environment Check:");
 console.log(`- NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`- DATAROBOT_ENDPOINT: ${process.env.DATAROBOT_ENDPOINT || '[NOT SET]'}`);
-console.log(`- DATAROBOT_API_TOKEN: ${envApiToken ? `[SET - ${envApiToken.substring(0, 10)}...]` : '[NOT SET]'}`);
+console.log("- DATAROBOT_API_TOKEN: ", envApiToken ? "[SET]" : "[NOT SET]");
 
 if (!envApiToken) {
   console.error("❌ Error: DATAROBOT_API_TOKEN not found in environment variables");
