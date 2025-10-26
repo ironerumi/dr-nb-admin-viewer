@@ -1,0 +1,7 @@
+name: dr-nb-admin-viewer
+runtime:
+  name: python
+  options:
+    virtualenv: .venv
+main: infra/
+description: DataRobot Custom Application infrastructure for dr-nb-admin-viewer

@@ -196,11 +196,22 @@ dr-nb-admin-viewer/
 │   └── api/
 │       ├── datarobot.ts              # DataRobot API client
 │       └── datarobot.test.ts         # API tests
+├── infra/
+│   ├── custom_environment/
+│   │   └── Dockerfile                # Bun runtime container definition
+│   ├── custom_application/
+│   │   ├── build-app.sh              # Build script (installs deps, builds CSS)
+│   │   └── start-app.sh              # Start script (launches Bun server)
+│   └── __main__.py                   # Pulumi infrastructure program
+├── quickstart.py                     # Deployment runner script
+├── requirements.txt                  # Python/Pulumi dependencies
 ├── reference/
 │   ├── mockup.png                    # Design mockup
 │   ├── notebooks-data.json           # Exported notebook data
 │   └── usecases-data.json            # Exported use case data
-└── docs/IMPLEMENTATION.md             # This file
+└── docs/
+    ├── IMPLEMENTATION.md             # This file
+    └── DEPLOYMENT.md                 # DataRobot deployment guide
 ```
 
 ## Usage
@@ -322,7 +333,10 @@ The first request fetches all data from DataRobot API and can take 15-20 seconds
 
 ### Port 8080 already in use?
 ```bash
-# Kill process on port 8080
+# Inspect process on port 8080
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+
+# After confirming, terminate the process
 lsof -ti:8080 | xargs kill -9
 ```
 
@@ -346,6 +360,119 @@ lsof -ti:8080 | xargs kill -9
 - @types/react-dom: ^19.2.2
 - typescript: ^5
 - tailwindcss: ^4.1.15
+
+### Deployment (Python)
+- pulumi: ^3.187.0
+- pulumi-datarobot: ^0.10.13
+- datarobot-pulumi-utils: ^0.0.2.post16
+
+## DataRobot Deployment
+
+This application can be deployed to the DataRobot platform as a Custom Application using Pulumi Infrastructure as Code.
+
+### Architecture
+
+**Deployment Stack:**
+- **Python + Pulumi**: Infrastructure/deployment tooling (isolated to deployment only)
+- **Bun Runtime**: Application execution in DataRobot containers
+- **Docker**: Custom execution environment with Bun
+
+### Quick Deploy
+
+```bash
+# Prerequisites: Python 3.9+, Pulumi CLI installed
+python quickstart.py <stack-name>
+```
+
+This will:
+1. Create Python virtual environment
+2. Install Pulumi dependencies
+3. Build custom Docker image with Bun runtime
+4. Package and upload application source
+5. Create DataRobot Custom Application
+6. Output application URL
+
+### Infrastructure Components
+
+**1. Custom Execution Environment** (`infra/custom_environment/Dockerfile`)
+- Base: `oven/bun:1-debian`
+- Port: 8080 (DataRobot standard)
+- No additional system dependencies needed
+
+**2. Build Script** (`infra/custom_application/build-app.sh`)
+```bash
+bun install
+bun run tailwind:build
+```
+
+**3. Start Script** (`infra/custom_application/start-app.sh`)
+```bash
+exec bun run start  # Launches Bun server
+```
+
+**4. Pulumi Program** (`infra/__main__.py`)
+- Creates execution environment from Dockerfile
+- Packages source code (excludes: .venv, node_modules, .git, reference/)
+- Configures resources (CPU_8XL, 1 replica, session affinity)
+- Creates Custom Application
+
+### Environment Variables
+
+Required in `.env`:
+```
+DATAROBOT_API_TOKEN=your_token
+DATAROBOT_ENDPOINT=https://app.datarobot.com/api/v2
+PULUMI_ACCESS_TOKEN=your_token  # Optional for local deployment
+```
+
+DataRobot provides these at runtime:
+- `DATAROBOT_API_TOKEN` - API authentication
+- `DATAROBOT_ENDPOINT` - API endpoint URL
+- `PORT` - Server port (always 8080)
+
+### Deployment Workflow
+
+1. **Local Development**: `bun run dev`
+2. **Test Build**: `./infra/custom_application/build-app.sh`
+3. **Deploy**: `python quickstart.py <stack-name>`
+4. **Update**: Re-run `python quickstart.py <stack-name>`
+5. **Destroy**: `python quickstart.py <stack-name> --action destroy`
+
+### File Exclusions
+
+Automatically excluded from deployment package:
+- `.venv/` - Python virtual environment
+- `node_modules/` - Dependencies (reinstalled during build)
+- `.git/` - Git metadata
+- `reference/` - Reference data
+- `.env` - Local secrets
+- All Python cache and build artifacts
+
+### CI/CD Integration
+
+Store secrets in GitHub:
+- `DATAROBOT_API_TOKEN`
+- `DATAROBOT_ENDPOINT`
+- `PULUMI_ACCESS_TOKEN`
+
+Deploy via GitHub Actions:
+```yaml
+- name: Deploy to DataRobot
+  env:
+    DATAROBOT_API_TOKEN: ${{ secrets.DATAROBOT_API_TOKEN }}
+    DATAROBOT_ENDPOINT: ${{ secrets.DATAROBOT_ENDPOINT }}
+    PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+  run: python quickstart.py prod
+```
+
+### Documentation
+
+For comprehensive deployment guide, see [docs/DEPLOYMENT.md](./DEPLOYMENT.md):
+- Prerequisites and setup
+- Detailed deployment steps
+- Troubleshooting common issues
+- Security best practices
+- Monitoring and logs
 
 ## License
 
