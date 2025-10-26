@@ -6,9 +6,17 @@ import { CountDisplay } from "./components/CountDisplay";
 import { MorphingSquare } from "./components/ui/loading";
 import "./styles/tailwind.css";
 
+interface ErrorState {
+  message: string;
+  httpStatus: number;
+  requestId?: string;
+  endpoint?: string;
+  responseBody?: string;
+}
+
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorState | null>(null);
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [codespaceCount, setCodespaceCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -27,18 +35,49 @@ export const App: React.FC = () => {
       const response = await fetch("./api/notebooks");
 
       if (!response.ok) {
-        // Try to get error details from response
-        let errorMessage = `サーバーエラー: ${response.status} ${response.statusText}`;
+        let errorState: ErrorState = {
+          message: `サーバーエラー: ${response.status} ${response.statusText}`,
+          httpStatus: response.status,
+        };
+
         try {
           const errorData = await response.json();
-          if (errorData.error) {
-            errorMessage = errorData.error;
+          if (typeof errorData === "object" && errorData !== null) {
+            const requestId = typeof errorData.requestId === "string" ? errorData.requestId : undefined;
+            const details = errorData.details as Record<string, unknown> | undefined;
+
+            if (details) {
+              if ("status" in details && typeof details.status === "number") {
+                errorState.httpStatus = details.status;
+              }
+
+              if ("statusText" in details && typeof details.statusText === "string") {
+                errorState.message = `サーバーエラー: ${details.status ?? response.status} ${details.statusText}`;
+              }
+
+              if ("endpoint" in details && typeof details.endpoint === "string") {
+                errorState.endpoint = details.endpoint;
+              }
+
+              if ("responseBody" in details && typeof details.responseBody === "string") {
+                errorState.responseBody = details.responseBody.slice(0, 500);
+              }
+            }
+
+            if (typeof errorData.error === "string" && errorData.error.trim().length > 0) {
+              errorState.message = errorData.error;
+            }
+
+            if (requestId) {
+              errorState.requestId = requestId;
+            }
           }
-        } catch {
-          // If JSON parsing fails, use status text
+        } catch (jsonError) {
+          console.warn("Failed to parse error response", jsonError);
+          // If JSON parsing fails, keep default message
         }
 
-        setError(errorMessage);
+        setError(errorState);
         setLoading(false);
         return;
       }
@@ -50,7 +89,10 @@ export const App: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error("Error fetching notebooks:", error);
-      setError("ネットワークエラー: サーバーに接続できませんでした");
+      setError({
+        message: "ネットワークエラー: サーバーに接続できませんでした",
+        httpStatus: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -99,7 +141,28 @@ export const App: React.FC = () => {
                   データの取得に失敗しました
                 </h3>
                 <div className="mt-2 text-sm text-red-700">
-                  <p className="mb-3">{error}</p>
+                  <p className="mb-3">{error.message}</p>
+
+                  {error.httpStatus ? (
+                    <p className="text-xs text-red-600">HTTPステータス: {error.httpStatus}</p>
+                  ) : null}
+
+                  {error.requestId ? (
+                    <p className="text-xs text-red-600">リクエストID: {error.requestId}</p>
+                  ) : null}
+
+                  {error.endpoint ? (
+                    <p className="text-xs text-red-600">エンドポイント: {error.endpoint}</p>
+                  ) : null}
+
+                  {error.responseBody ? (
+                    <div className="bg-red-100 border border-red-300 rounded p-3 mt-3">
+                      <p className="font-semibold mb-2">レスポンス内容:</p>
+                      <pre className="text-xs whitespace-pre-wrap break-words max-h-48 overflow-auto">
+                        {error.responseBody}
+                      </pre>
+                    </div>
+                  ) : null}
 
                   <div className="bg-red-100 border border-red-300 rounded p-3 mt-3">
                     <p className="font-semibold mb-2">考えられる原因:</p>
@@ -109,17 +172,6 @@ export const App: React.FC = () => {
                       <li>サーバーログで詳細なエラー情報を確認してください</li>
                     </ul>
                   </div>
-
-                  <button
-                    onClick={() => {
-                      setError(null);
-                      setLoading(true);
-                      fetchNotebooks();
-                    }}
-                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    再試行
-                  </button>
                 </div>
               </div>
             </div>

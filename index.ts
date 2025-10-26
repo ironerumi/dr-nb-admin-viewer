@@ -5,6 +5,7 @@ import {
   type Notebook,
   type UseCase,
 } from "./src/api/datarobot";
+import type { UpstreamError } from "./src/api/datarobot";
 import path from "path";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -59,7 +60,45 @@ async function fetchData() {
 }
 
 // API handler for notebooks
+function createRequestId(): string {
+  return crypto.randomUUID();
+}
+
+function createErrorResponse(error: unknown, requestId: string): Response {
+  if (error && typeof error === "object" && "status" in error) {
+    const upstream = error as UpstreamError;
+    return new Response(
+      JSON.stringify({
+        requestId,
+        error: upstream.message,
+        details: {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          endpoint: upstream.endpoint,
+          responseBody: upstream.responseBody,
+        },
+      }),
+      {
+        status: upstream.status,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({
+      requestId,
+      error: "Internal server error",
+    }),
+    {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+}
+
 async function handleNotebooksAPI() {
+  const requestId = createRequestId();
   try {
     const { notebooks, useCases } = await fetchData();
 
@@ -85,6 +124,7 @@ async function handleNotebooksAPI() {
 
     return new Response(
       JSON.stringify({
+        requestId,
         total: notebooks.length,
         codespaceCount,
         notebookCount,
@@ -95,14 +135,8 @@ async function handleNotebooksAPI() {
       }
     );
   } catch (error) {
-    console.error("Error fetching notebooks:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch notebooks" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    console.error(`[${requestId}] Error fetching notebooks:`, error);
+    return createErrorResponse(error, requestId);
   }
 }
 

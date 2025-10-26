@@ -1,3 +1,26 @@
+export interface UpstreamError {
+  status: number;
+  statusText: string;
+  message: string;
+  endpoint: string;
+  responseBody?: string;
+}
+
+async function makeUpstreamError(
+  response: Response,
+  endpoint: string,
+  preReadBody?: string
+): Promise<UpstreamError> {
+  const responseBody = preReadBody ?? (await response.text().catch(() => undefined));
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    message: `HTTP ${response.status} ${response.statusText}`,
+    endpoint,
+    responseBody,
+  };
+}
+
 export interface DatasetResponse {
   count: number;
   next: string | null;
@@ -111,7 +134,8 @@ const MAX_RETRIES = 3;
 const MAX_CONCURRENT_REQUESTS = 5;
 
 export async function fetchDatasets(apiToken: string): Promise<DatasetResponse> {
-  const response = await fetch(new URL("datasets/", API_V2_BASE_URL), {
+  const endpoint = new URL("datasets/", API_V2_BASE_URL).toString();
+  const response = await fetch(endpoint, {
     method: "GET",
     headers: {
       "Authorization": `Bearer ${apiToken}`,
@@ -120,7 +144,7 @@ export async function fetchDatasets(apiToken: string): Promise<DatasetResponse> 
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+    throw await makeUpstreamError(response, endpoint);
   }
 
   return await response.json() as DatasetResponse;
@@ -141,7 +165,8 @@ export async function fetchUseCases(
   console.log(`🌐 Fetching use cases from: ${url.toString()}`);
   console.log(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
 
-  const response = await fetch(url.toString(), {
+  const endpoint = url.toString();
+  const response = await fetch(endpoint, {
     method: "GET",
     headers: {
       "Authorization": `Bearer ${apiToken}`,
@@ -152,11 +177,11 @@ export async function fetchUseCases(
   if (!response.ok) {
     console.error(`❌ API Error Details:`);
     console.error(`   Status: ${response.status} - ${response.statusText}`);
-    console.error(`   URL: ${url.toString()}`);
+    console.error(`   URL: ${endpoint}`);
     console.error(`   Token prefix: ${apiToken.substring(0, 10)}...`);
     const errorBody = await response.text().catch(() => "Unable to read error body");
     console.error(`   Response body: ${errorBody}`);
-    throw new Error(`HTTP ${response.status} - ${response.statusText}: ${errorBody}`);
+    throw await makeUpstreamError(response, endpoint, errorBody);
   }
 
   return await response.json() as UseCaseResponse;
@@ -174,10 +199,11 @@ export async function fetchNotebooks(
   url.searchParams.set("limit", limit.toString());
   url.searchParams.set("orderBy", "-updated");
 
-  console.log(`🌐 Fetching notebooks from: ${url.toString()}`);
-  console.log(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
+  console.debug(`🌐 Fetching notebooks from: ${url.toString()}`);
+  console.debug(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
 
-  const response = await fetch(url.toString(), {
+  const endpoint = url.toString();
+  const response = await fetch(endpoint, {
     method: "GET",
     headers: {
       "Authorization": `Bearer ${apiToken}`,
@@ -188,11 +214,11 @@ export async function fetchNotebooks(
   if (!response.ok) {
     console.error(`❌ API Error Details:`);
     console.error(`   Status: ${response.status} - ${response.statusText}`);
-    console.error(`   URL: ${url.toString()}`);
+    console.error(`   URL: ${endpoint}`);
     console.error(`   Token prefix: ${apiToken.substring(0, 10)}...`);
     const errorBody = await response.text().catch(() => "Unable to read error body");
     console.error(`   Response body: ${errorBody}`);
-    throw new Error(`HTTP ${response.status} - ${response.statusText}: ${errorBody}`);
+    throw await makeUpstreamError(response, endpoint, errorBody);
   }
 
   return await response.json() as NotebookResponse;
@@ -206,7 +232,7 @@ export async function fetchAllUseCases(apiToken: string): Promise<UseCase[]> {
   while (hasMore) {
     const response = await fetchUseCases(apiToken, offset, DEFAULT_LIMIT);
     allUseCases.push(...response.data);
-    
+
     if (response.next) {
       offset += DEFAULT_LIMIT;
     } else {
@@ -237,7 +263,7 @@ export async function fetchAllNotebooksForUseCase(
   while (hasMore) {
     const response = await fetchNotebooks(apiToken, useCaseId, offset, DEFAULT_LIMIT);
     allNotebooks.push(...response.data);
-    
+
     if (response.next) {
       offset += DEFAULT_LIMIT;
     } else {
@@ -301,16 +327,17 @@ export async function fetchAllNotebooksForAllUseCases(
   useCaseIds: string[]
 ): Promise<Notebook[]> {
   const semaphore = new Semaphore(MAX_CONCURRENT_REQUESTS);
-  
-  const tasks = useCaseIds.map(useCaseId => async () => {
-    await semaphore.acquire();
-    try {
-      return await fetchWithRetry(() => fetchAllNotebooksForUseCase(apiToken, useCaseId));
-    } finally {
-      semaphore.release();
-    }
-  });
 
-  const results = await Promise.all(tasks.map(task => task()));
-  return results.flat();
+  const notebooksByUseCase = await Promise.all(
+    useCaseIds.map(async (useCaseId) => {
+      await semaphore.acquire();
+      try {
+        return await fetchWithRetry(() => fetchAllNotebooksForUseCase(apiToken, useCaseId));
+      } finally {
+        semaphore.release();
+      }
+    })
+  );
+
+  return notebooksByUseCase.flat();
 }
