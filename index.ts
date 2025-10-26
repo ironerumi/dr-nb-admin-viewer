@@ -47,7 +47,8 @@ async function fetchData() {
 }
 
 Bun.serve({
-  port: 3000,
+  port: 8080,
+  hostname: "0.0.0.0",
   idleTimeout: 120,
   routes: {
     "/": indexHtml,
@@ -105,4 +106,4 @@ Bun.serve({
   },
 });
 
-console.log("Server running at http://localhost:3000");
+console.log("Server running at http://0.0.0.0:8080");

@@ -211,7 +211,7 @@ dr-nb-admin-viewer/
 # Start the Tailwind watcher + Bun dev server (auto-compiles on change)
 bun run dev
 
-# Access at http://localhost:3000
+# Access at http://localhost:8080 (or http://0.0.0.0:8080)
 ```
 
 ### Production
@@ -320,10 +320,10 @@ bun run tailwind:build
 ### Server timeout on first load?
 The first request fetches all data from DataRobot API and can take 15-20 seconds. Subsequent requests use cached data (5-minute TTL).
 
-### Port 3000 already in use?
+### Port 8080 already in use?
 ```bash
-# Kill process on port 3000
-lsof -ti:3000 | xargs kill -9
+# Kill process on port 8080
+lsof -ti:8080 | xargs kill -9
 ```
 
 ## Dependencies

@@ -54,7 +54,7 @@ bun run dev
 
 This runs the Tailwind CLI in watch mode and the Bun server simultaneously.
 
-Then open [http://localhost:3000](http://localhost:3000) in your browser.
+Then open [http://localhost:8080](http://localhost:8080) (or `http://0.0.0.0:8080` for remote access) in your browser.
 
 ### Production Mode
 
