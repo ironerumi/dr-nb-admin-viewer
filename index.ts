@@ -1,11 +1,12 @@
 import {
   fetchAllUseCases,
-  fetchAllNotebooksForAllUseCases,
+  fetchAllNotebooksForUseCase,
   DATAROBOT_HOST_BASE_URL,
   type Notebook,
   type UseCase,
 } from "./src/api/datarobot";
 import type { UpstreamError } from "./src/api/datarobot";
+import type { NotebooksProgress } from "./src/types/progress";
 import path from "path";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -35,28 +36,107 @@ let cachedData: {
   lastFetched: number;
 } | null = null;
 
+const DEFAULT_PROGRESS: NotebooksProgress = {
+  phase: "idle",
+  useCasesFetched: 0,
+  notebooksFetched: 0,
+};
+
+let currentProgress: NotebooksProgress = { ...DEFAULT_PROGRESS };
+
 const CACHE_DURATION = 5 * 60 * 1000;
 
 async function fetchData() {
   const now = Date.now();
   
   if (cachedData && now - cachedData.lastFetched < CACHE_DURATION) {
+    currentProgress = {
+      phase: "done",
+      useCasesFetched: cachedData.useCases.length,
+      useCasesTotal: cachedData.useCases.length,
+      notebooksFetched: cachedData.notebooks.length,
+      notebooksTotal: cachedData.notebooks.length,
+      message: `キャッシュから ${cachedData.notebooks.length} 件のノートブックを読み込みました`,
+      isCached: true,
+    };
     return cachedData;
   }
 
   console.log("Fetching data from DataRobot API...");
-  const useCases = await fetchAllUseCases(apiToken);
-  const useCaseIds = useCases.map(uc => uc.id);
-  const notebooks = await fetchAllNotebooksForAllUseCases(apiToken, useCaseIds);
-
-  cachedData = {
-    notebooks,
-    useCases,
-    lastFetched: now,
+  currentProgress = {
+    phase: "fetchingUseCases",
+    useCasesFetched: 0,
+    notebooksFetched: 0,
+    message: "ユースケースを取得中...",
   };
 
-  console.log(`Fetched ${notebooks.length} notebooks and ${useCases.length} use cases`);
-  return cachedData;
+  try {
+    const useCases = await fetchAllUseCases(apiToken, (fetched, total) => {
+      currentProgress = {
+        ...currentProgress,
+        phase: "fetchingUseCases",
+        useCasesFetched: fetched,
+        useCasesTotal: total,
+        message: `ユースケースを取得中 (${fetched}${total ? ` / ${total}` : ""})`,
+      };
+    });
+
+    const useCaseIds = useCases.map(uc => uc.id);
+    currentProgress = {
+      ...currentProgress,
+      phase: "fetchingNotebooks",
+      useCasesFetched: useCases.length,
+      useCasesTotal: useCases.length,
+      notebooksFetched: 0,
+      notebooksTotal: useCases.reduce((sum, uc) => sum + (uc.notebooksCount ?? 0), 0) || undefined,
+      message: `ノートブックを ${useCases.length} 件のユースケースから取得中...`,
+    };
+
+    const notebooks: Notebook[] = [];
+
+    for (const useCase of useCases) {
+      currentProgress = {
+        ...currentProgress,
+        currentUseCaseName: useCase.name,
+        message: `${useCase.name} のノートブックを取得中...`,
+      };
+
+      const notebooksForUseCase = await fetchAllNotebooksForUseCase(apiToken, useCase.id);
+      notebooks.push(...notebooksForUseCase);
+
+      currentProgress = {
+        ...currentProgress,
+        notebooksFetched: notebooks.length,
+        message: `${useCase.name} のノートブックを ${notebooksForUseCase.length} 件取得しました`,
+      };
+    }
+
+    cachedData = {
+      notebooks,
+      useCases,
+      lastFetched: now,
+    };
+
+    console.log(`Fetched ${notebooks.length} notebooks and ${useCases.length} use cases`);
+    currentProgress = {
+      ...currentProgress,
+      phase: "done",
+      notebooksFetched: notebooks.length,
+      notebooksTotal: notebooks.length,
+      message: `${useCases.length} 件のユースケースから ${notebooks.length} 件のノートブックを取得しました`,
+    };
+
+    return cachedData;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "データ取得中にエラーが発生しました";
+    currentProgress = {
+      ...currentProgress,
+      phase: "error",
+      error: message,
+      message,
+    };
+    throw error;
+  }
 }
 
 // API handler for notebooks
@@ -100,6 +180,11 @@ function createErrorResponse(error: unknown, requestId: string): Response {
 async function handleNotebooksAPI() {
   const requestId = createRequestId();
   try {
+    currentProgress = {
+      ...DEFAULT_PROGRESS,
+      phase: "fetchingUseCases",
+      message: "ユースケースを取得中...",
+    };
     const { notebooks, useCases } = await fetchData();
 
     const useCaseMap = new Map(useCases.map(uc => [uc.id, uc.name]));
@@ -136,8 +221,23 @@ async function handleNotebooksAPI() {
     );
   } catch (error) {
     console.error(`[${requestId}] Error fetching notebooks:`, error);
+    currentProgress = {
+      ...currentProgress,
+      phase: "error",
+      error: error instanceof Error ? error.message : "Unknown error",
+      message: error instanceof Error ? error.message : "Unknown error",
+    };
     return createErrorResponse(error, requestId);
   }
+}
+
+function handleProgressAPI() {
+  return new Response(
+    JSON.stringify(currentProgress),
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
 
 if (isProduction) {
@@ -152,6 +252,10 @@ if (isProduction) {
       // API routes
       if (url.pathname === "/api/notebooks") {
         return handleNotebooksAPI();
+      }
+
+      if (url.pathname === "/api/progress") {
+        return handleProgressAPI();
       }
 
       // Serve static files from ./dist
@@ -180,6 +284,11 @@ if (isProduction) {
       "/api/notebooks": {
         async GET() {
           return handleNotebooksAPI();
+        }
+      },
+      "/api/progress": {
+        async GET() {
+          return handleProgressAPI();
         }
       }
     },

@@ -224,14 +224,23 @@ export async function fetchNotebooks(
   return await response.json() as NotebookResponse;
 }
 
-export async function fetchAllUseCases(apiToken: string): Promise<UseCase[]> {
+export async function fetchAllUseCases(
+  apiToken: string,
+  onProgress?: (fetched: number, total?: number) => void
+): Promise<UseCase[]> {
   const allUseCases: UseCase[] = [];
   let offset = 0;
   let hasMore = true;
+  let totalFetched = 0;
+  let totalCount: number | undefined;
 
   while (hasMore) {
     const response = await fetchUseCases(apiToken, offset, DEFAULT_LIMIT);
     allUseCases.push(...response.data);
+    totalFetched += response.data.length;
+    totalCount = response.totalCount ?? totalCount;
+
+    onProgress?.(totalFetched, totalCount);
 
     if (response.next) {
       offset += DEFAULT_LIMIT;
@@ -272,72 +281,4 @@ export async function fetchAllNotebooksForUseCase(
   }
 
   return allNotebooks;
-}
-
-async function fetchWithRetry<T>(
-  fn: () => Promise<T>,
-  retries: number = MAX_RETRIES
-): Promise<T> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      const isRateLimit = error instanceof Error && error.message.includes("429");
-      const isLastAttempt = i === retries - 1;
-      
-      if (!isRateLimit || isLastAttempt) {
-        throw error;
-      }
-      
-      const delay = 100 * Math.pow(2, i);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  throw new Error("Max retries exceeded");
-}
-
-class Semaphore {
-  private tasks: (() => void)[] = [];
-  private count: number;
-
-  constructor(max: number) {
-    this.count = max;
-  }
-
-  async acquire(): Promise<void> {
-    if (this.count > 0) {
-      this.count--;
-      return;
-    }
-    return new Promise(resolve => this.tasks.push(resolve));
-  }
-
-  release(): void {
-    this.count++;
-    const next = this.tasks.shift();
-    if (next) {
-      this.count--;
-      next();
-    }
-  }
-}
-
-export async function fetchAllNotebooksForAllUseCases(
-  apiToken: string,
-  useCaseIds: string[]
-): Promise<Notebook[]> {
-  const semaphore = new Semaphore(MAX_CONCURRENT_REQUESTS);
-
-  const notebooksByUseCase = await Promise.all(
-    useCaseIds.map(async (useCaseId) => {
-      await semaphore.acquire();
-      try {
-        return await fetchWithRetry(() => fetchAllNotebooksForUseCase(apiToken, useCaseId));
-      } finally {
-        semaphore.release();
-      }
-    })
-  );
-
-  return notebooksByUseCase.flat();
 }

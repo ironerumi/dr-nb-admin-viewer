@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import type { Notebook, NotebooksResponse } from "./types/notebook";
+import type { NotebooksProgress } from "./types/progress";
 import { NotebooksTable } from "./components/NotebooksTable";
 import { FilterCheckboxes, type FilterState } from "./components/FilterCheckboxes";
 import { CountDisplay } from "./components/CountDisplay";
-import { MorphingSquare } from "./components/ui/loading";
+import { ProgressLoader } from "./components/ui/ProgressLoader";
 import "./styles/tailwind.css";
 
 interface ErrorState {
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [codespaceCount, setCodespaceCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [progress, setProgress] = useState<NotebooksProgress | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     codespaceOnly: false,
     oneMonthOld: false,
@@ -27,7 +29,49 @@ export const App: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchNotebooks();
+    let isMounted = true;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const pollProgress = async () => {
+      try {
+        const res = await fetch("./api/progress");
+        if (!res.ok) {
+          throw new Error(`Failed to fetch progress: ${res.status}`);
+        }
+        const data: NotebooksProgress = await res.json();
+        if (isMounted) {
+          setProgress(data);
+        }
+      } catch (err) {
+        console.error("Failed to poll progress", err);
+      }
+    };
+
+    const startPolling = () => {
+      if (pollTimer === null) {
+        pollTimer = setInterval(pollProgress, 1500);
+      }
+    };
+
+    (async () => {
+      await pollProgress();
+      startPolling();
+      await fetchNotebooks();
+      await pollProgress();
+      if (pollTimer !== null) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    })().catch(err => {
+      console.error("Failed to initialize loading state", err);
+    });
+
+    return () => {
+      isMounted = false;
+      if (pollTimer !== null) {
+        clearInterval(pollTimer);
+      }
+    };
   }, []);
 
   const fetchNotebooks = async () => {
@@ -122,7 +166,7 @@ export const App: React.FC = () => {
   });
 
   if (loading) {
-    return <MorphingSquare />;
+    return <ProgressLoader progress={progress} />;
   }
 
   if (error) {
