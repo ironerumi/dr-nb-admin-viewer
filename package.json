@@ -6,8 +6,9 @@
   "scripts": {
     "test": "bun test",
     "tailwind:build": "tailwindcss -i ./src/styles/globals.css -o ./src/styles/tailwind.css --minify",
+    "build": "bun run tailwind:build && bun scripts/build.ts",
     "dev": "bun scripts/dev.ts",
-    "start": "bun run tailwind:build && bun index.ts"
+    "start": "bun run build && NODE_ENV=production bun index.ts"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.16",

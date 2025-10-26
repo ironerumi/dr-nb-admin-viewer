@@ -137,12 +137,130 @@ A web-based admin tool for viewing and managing DataRobot Notebooks and Codespac
    - Count display (static) ✅
    - Pagination ✅
 
+### Phase 7: DataRobot Deployment Optimization
+1. **Build System for Proxy Compatibility**
+   - Created `scripts/build.ts` using `Bun.build()` with `publicPath: './'`
+   - Generates relative asset paths (`./chunk-*.css`) instead of absolute paths (`/_bun/asset/`)
+   - Outputs to `dist/` directory with bundled and minified assets
+   - Updated `package.json` with `build` script
+
+2. **Server Architecture for Production**
+   - Split server configuration into development and production modes
+   - Development: Uses `routes` with HTMLBundle for HMR
+   - Production: Uses `fetch` handler to serve from `./dist`
+   - Changed API path from `/api/notebooks` to `./api/notebooks` (relative)
+
+3. **Environment Variable Management**
+   - Updated `start-app.sh` to load `.env` file at runtime
+   - Overrides DataRobot's restricted API token with full-permission token
+   - Added debug logging to verify token loading
+
+4. **Deployment Scripts**
+   - Updated `build-app.sh` to run `bun run build` (not just Tailwind)
+   - Updated `start-app.sh` to:
+     - Load `.env` environment variables
+     - Start server without rebuild (build happens during Docker build)
+   - Added environment variable debugging output
+
+## DataRobot Deployment Architecture
+
+### Proxy Compatibility Challenge
+
+**Problem:**
+- DataRobot serves apps at `/custom_applications/<ID>/`
+- Bun's default bundler generates absolute paths: `/_bun/asset/xyz.css`
+- Browser requests: `https://app.datarobot.com/_bun/asset/xyz.css` (404 error)
+- Should be: `https://app.datarobot.com/custom_applications/<ID>/chunk-xyz.css`
+
+**Solution:**
+Used `Bun.build()` with `publicPath: './'` to generate relative paths:
+```typescript
+// scripts/build.ts
+await Bun.build({
+  entrypoints: ['./index.html'],
+  outdir: './dist',
+  publicPath: './',  // Generate relative paths
+  minify: true,
+});
+```
+
+**Result:**
+- `dist/index.html` contains: `<script src="./chunk-xyz.js">`
+- Browser resolves relative to current page URL
+- Works at any base path (local dev or DataRobot proxy)
+
+### API Path Compatibility
+
+**Problem:**
+- Frontend API call: `fetch("/api/notebooks")`
+- Behind proxy resolves to: `https://app.datarobot.com/api/notebooks` (wrong!)
+- Should be: `https://app.datarobot.com/custom_applications/<ID>/api/notebooks`
+
+**Solution:**
+Changed to relative path in `src/App.tsx`:
+```typescript
+// Before
+const response = await fetch("/api/notebooks");
+
+// After
+const response = await fetch("./api/notebooks");
+```
+
+### Environment Variable Override
+
+**Problem:**
+- DataRobot runtime provides `DATAROBOT_API_TOKEN` automatically
+- This token has restricted permissions (cannot read use cases/notebooks)
+- API requests fail with 401 Unauthorized
+
+**Solution:**
+Load full-permission token from `.env` file in `start-app.sh`:
+```bash
+# Load .env file uploaded via Pulumi
+if [ -f .env ]; then
+  set -a        # Auto-export variables
+  . ./.env      # Source file
+  set +a        # Turn off auto-export
+fi
+```
+
+**Flow:**
+1. Container starts with restricted `DATAROBOT_API_TOKEN`
+2. `start-app.sh` loads `.env` file
+3. Full-permission token overrides restricted token
+4. Application can access required APIs
+
+### Server Mode Switching
+
+**Development Mode:**
+```typescript
+Bun.serve({
+  routes: {
+    "/": indexHtml,  // HTMLBundle for HMR
+    "/api/notebooks": { GET: handler }
+  },
+  development: { hmr: true }
+});
+```
+
+**Production Mode:**
+```typescript
+Bun.serve({
+  fetch(req) {
+    // Serve static files from ./dist
+    const file = Bun.file(path.join("./dist", filePath));
+    return new Response(file);
+  }
+});
+```
+
 ## Technical Decisions
 
 ### Why Bun?
 - Built-in TypeScript support
 - Native HTML imports for React components
 - Fast bundler with HMR (Hot Module Reloading)
+- `Bun.build()` API with `publicPath` configuration
 - Simple serve configuration with routes
 - Project requirement (specified in CLAUDE.md)
 
@@ -235,8 +353,9 @@ bun run start
 ### Scripts
 
 - `bun run tailwind:build` - One-off Tailwind CSS build (minified output)
-- `bun run dev` - Runs Tailwind watcher and Bun dev server together
-- `bun run start` - Builds CSS then starts the Bun server
+- `bun run build` - Build Tailwind CSS + frontend assets with `publicPath: './'`
+- `bun run dev` - Runs Tailwind watcher and Bun dev server (development mode with HMR)
+- `bun run start` - Builds assets then starts production server (serves from `./dist`)
 - `bun test` - Run tests
 
 ## Features
@@ -279,10 +398,17 @@ bun run start
 
 ## Environment Setup
 
-Required environment variable in `.env`:
+Required environment variables in `.env`:
+```bash
+DATAROBOT_API_TOKEN=your_full_permission_token
+DATAROBOT_ENDPOINT=https://app.datarobot.com/api/v2
 ```
-DATAROBOT_API_TOKEN=your_token_here
-```
+
+**Critical Requirements:**
+- Token must have permissions to read use cases and notebooks
+- When deploying to DataRobot, this `.env` file is uploaded via Pulumi
+- `start-app.sh` loads `.env` to override restricted runtime token
+- Without this override, API requests fail with 401 Unauthorized
 
 ## API Response Structure
 

@@ -138,6 +138,9 @@ export async function fetchUseCases(
   url.searchParams.set("orderBy", "name");
   url.searchParams.set("showOrgUseCases", "true");
 
+  console.log(`🌐 Fetching use cases from: ${url.toString()}`);
+  console.log(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
+
   const response = await fetch(url.toString(), {
     method: "GET",
     headers: {
@@ -147,7 +150,13 @@ export async function fetchUseCases(
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+    console.error(`❌ API Error Details:`);
+    console.error(`   Status: ${response.status} - ${response.statusText}`);
+    console.error(`   URL: ${url.toString()}`);
+    console.error(`   Token prefix: ${apiToken.substring(0, 10)}...`);
+    const errorBody = await response.text().catch(() => "Unable to read error body");
+    console.error(`   Response body: ${errorBody}`);
+    throw new Error(`HTTP ${response.status} - ${response.statusText}: ${errorBody}`);
   }
 
   return await response.json() as UseCaseResponse;
@@ -165,6 +174,9 @@ export async function fetchNotebooks(
   url.searchParams.set("limit", limit.toString());
   url.searchParams.set("orderBy", "-updated");
 
+  console.log(`🌐 Fetching notebooks from: ${url.toString()}`);
+  console.log(`🔑 Using token (first 10 chars): ${apiToken.substring(0, 10)}...`);
+
   const response = await fetch(url.toString(), {
     method: "GET",
     headers: {
@@ -174,7 +186,13 @@ export async function fetchNotebooks(
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+    console.error(`❌ API Error Details:`);
+    console.error(`   Status: ${response.status} - ${response.statusText}`);
+    console.error(`   URL: ${url.toString()}`);
+    console.error(`   Token prefix: ${apiToken.substring(0, 10)}...`);
+    const errorBody = await response.text().catch(() => "Unable to read error body");
+    console.error(`   Response body: ${errorBody}`);
+    throw new Error(`HTTP ${response.status} - ${response.statusText}: ${errorBody}`);
   }
 
   return await response.json() as NotebookResponse;

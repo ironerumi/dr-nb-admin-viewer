@@ -38,7 +38,7 @@ This keeps Python isolated to deployment tooling while maintaining a pure Bun ap
 
 3. **DataRobot Account**
    - Access to DataRobot platform
-   - API token with appropriate permissions
+   - API token **with full permissions** (see note below)
 
 ### Environment Setup
 
@@ -56,6 +56,28 @@ This keeps Python isolated to deployment tooling while maintaining a pure Bun ap
    # Optional: for Pulumi Cloud (or use --local)
    PULUMI_ACCESS_TOKEN=your_pulumi_token_here
    ```
+
+   > **⚠️ CRITICAL: API Token Requirements**
+   >
+   > Your `DATAROBOT_API_TOKEN` must have permissions to:
+   > - Read use cases (`GET /api/v2/useCases/`)
+   > - Read notebooks (`GET /api-gw/nbx/notebooks/`)
+   >
+   > **Why this matters:**
+   > - DataRobot's runtime provides a restricted API token automatically
+   > - This restricted token lacks permissions to read use cases and notebooks
+   > - The application loads your full-permission token from `.env` (uploaded via Pulumi)
+   > - Your token overrides the restricted runtime token in `start-app.sh`
+   >
+   > **How to verify your token has permissions:**
+   > ```bash
+   > # Test locally before deploying
+   > curl -H "Authorization: Bearer YOUR_TOKEN" \
+   >   https://app.datarobot.com/api/v2/useCases/?limit=1
+   >
+   > # Should return 200 OK with use case data
+   > # If you get 401/403, your token lacks permissions
+   > ```
 
 3. **Login to Pulumi**
 
@@ -159,18 +181,50 @@ Defines the runtime container:
 
 Executed after Docker image is built:
 ```bash
-bun install           # Install dependencies
-bun run tailwind:build  # Build CSS
+bun install       # Install dependencies
+bun run build     # Build Tailwind CSS + frontend assets
 ```
+
+**What `bun run build` does:**
+1. Compiles Tailwind CSS (`bun run tailwind:build`)
+2. Runs `Bun.build()` with `publicPath: './'` to generate:
+   - `dist/index.html` - HTML with relative asset paths
+   - `dist/chunk-*.js` - JavaScript bundles
+   - `dist/chunk-*.css` - CSS bundles
+
+**Why relative paths matter:**
+- DataRobot serves apps at `/custom_applications/<ID>/`
+- Absolute paths like `/_bun/asset/xyz.css` fail (404)
+- Relative paths like `./chunk-xyz.css` work correctly
 
 ### 3. Application Start Script
 
 **File**: `infra/custom_application/start-app.sh`
 
-Container entrypoint:
+Container entrypoint - loads environment from `.env` then starts server:
 ```bash
-exec bun run start    # Runs: bun run tailwind:build && bun index.ts
+# Load .env file (overrides restricted runtime token)
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
+# Start server (serves pre-built assets from ./dist)
+exec bun index.ts
 ```
+
+**Critical behavior:**
+1. **Loads `.env` file** uploaded via Pulumi containing your full-permission API token
+2. **Overrides** DataRobot's restricted `DATAROBOT_API_TOKEN` environment variable
+3. **Starts server** in production mode (NODE_ENV=production from Dockerfile)
+4. **Serves** pre-built assets from `./dist` directory
+
+**Why .env loading is required:**
+- DataRobot runtime provides `DATAROBOT_API_TOKEN` automatically
+- This runtime token is restricted and cannot read use cases/notebooks
+- Loading `.env` replaces it with your full-permission token
+- Without this, API requests fail with 401 Unauthorized
 
 ### 4. Pulumi Program
 
@@ -218,12 +272,33 @@ __pycache__/        # Python cache
 
 ## Environment Variables in DataRobot
 
+### Runtime Environment Variables
+
 DataRobot automatically provides:
-- `DATAROBOT_API_TOKEN` - API authentication
+- `DATAROBOT_API_TOKEN` - **Restricted** API token (insufficient permissions)
 - `DATAROBOT_ENDPOINT` - DataRobot API endpoint
 - `PORT` - Port to listen on (always 8080)
+- `NODE_ENV` - Set to `production` in Dockerfile
 
-These are available in your Bun application via `process.env`.
+### Overriding with .env File
+
+The application loads environment variables from `.env` (uploaded via Pulumi):
+```bash
+# .env file contents (uploaded to container)
+DATAROBOT_API_TOKEN=your_full_permission_token
+DATAROBOT_ENDPOINT=https://app.datarobot.com/api/v2
+```
+
+**Loading mechanism:**
+1. `start-app.sh` sources `.env` file using `. ./.env`
+2. Variables are exported with `set -a` flag
+3. Your full-permission token **overrides** the restricted runtime token
+4. Application can now access use cases and notebooks APIs
+
+**Security note:**
+- `.env` is excluded from git via `.gitignore`
+- Pulumi uploads `.env` as part of the application source package
+- Token is only accessible inside the container
 
 ## Resource Configuration
 
@@ -269,8 +344,45 @@ execution_environment_version_id  version-abc123
 **Solution**:
 ```bash
 cp .env.template .env
-# Edit .env and add your actual token
+# Edit .env and add your actual token with FULL permissions
 ```
+
+### 2. "HTTP 401 - UNAUTHORIZED" in deployed application
+
+**Cause**: API token lacks required permissions
+
+**Symptoms**:
+- Application starts successfully
+- UI loads but shows no data
+- Logs show `HTTP 401 - UNAUTHORIZED` errors
+
+**Solution**:
+1. Verify your token has permissions:
+   ```bash
+   curl -H "Authorization: Bearer YOUR_TOKEN" \
+     https://app.datarobot.com/api/v2/useCases/?limit=1
+   ```
+2. If 401/403, get a new token with:
+   - Use Case read permissions
+   - Notebook read permissions
+3. Update `.env` with new token
+4. Redeploy:
+   ```bash
+   python quickstart.py <stack-name>
+   ```
+
+### 3. Assets fail to load (404 errors for CSS/JS)
+
+**Cause**: Asset paths not relative
+
+**Symptoms**:
+- UI shows but no styling
+- Browser DevTools shows 404 errors for `/_bun/asset/xyz.css`
+
+**Solution**:
+- Ensure `bun run build` was executed during deployment
+- Check `dist/index.html` contains relative paths (`./chunk-*.css`)
+- Verify `build-app.sh` runs `bun run build` (not `bun run tailwind:build`)
 
 ### 2. "pulumi: command not found"
 

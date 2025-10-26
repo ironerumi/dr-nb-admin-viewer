@@ -10,5 +10,5 @@ fi
 echo "Installing dependencies (bun install)…"
 bun install
 
-echo "Building Tailwind CSS (bun run tailwind:build)…"
-bun run tailwind:build
+echo "Building production assets (bun run build)…"
+bun run build
