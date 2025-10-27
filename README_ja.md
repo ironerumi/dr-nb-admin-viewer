@@ -19,18 +19,14 @@ DataRobot カスタムアプリとして本プロジェクトを利用する際�
 ### セットアップ
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/ironerumi/dr-nb-admin-viewer.git
 cd dr-nb-admin-viewer
-bun install
-
-# 開発モード
-bun run dev
-
-# 本番ビルド & サーブ
-bun run start
 ```
 
 ルートに `.env` を作成し、少なくとも以下を記載します。
+```bash
+cp .env.template .env
+```
 カスタムアプリに自動でセットされるAPIキーは権限不足しているため`DATAROBOT_API_TOKEN`の設定は必須です。
 
 ```bash
@@ -48,6 +44,19 @@ python quickstart.py <stack-name>
 ```
 
 完了後に表示されるアプリ URL へアクセスし、データが表示されるか確認します。再デプロイは同じコマンドを再実行、削除は `--action destroy` を付けて実行します。
+
+### ローカル開発
+```
+# bun をインストール
+# パッケージインストール
+bun install
+
+# 開発モード
+bun run dev
+
+# 本番ビルド & サーブ
+bun run start
+```
 
 ## トラブルシューティング
 
