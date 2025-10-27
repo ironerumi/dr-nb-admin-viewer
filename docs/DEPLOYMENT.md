@@ -20,9 +20,9 @@ This keeps Python isolated to deployment tooling while maintaining a pure Bun ap
 
 ### Required Software
 
-1. **Python 3.9+**
+1. **Python 3.11+**
    ```bash
-   python3 --version  # Should be 3.9 or higher
+   python3 --version  # Should be 3.11 or higher
    ```
 
 2. **Pulumi CLI**
