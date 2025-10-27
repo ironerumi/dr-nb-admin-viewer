@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pulumi
 import pulumi_datarobot as datarobot
+from datarobot_pulumi_utils.common.feature_flags import fetch_flag_statuses
 from datarobot_pulumi_utils.pulumi.stack import PROJECT_NAME
 from datarobot_pulumi_utils.schema.apps import CustomAppResourceBundles
 
@@ -98,6 +99,11 @@ for f in application_path.glob("**/*"):
     else:
         source_files.append((f.as_posix(), f.relative_to(application_path).as_posix()))
 
+resource_bundles_flag = "ENABLE_MLOPS_RESOURCE_REQUEST_BUNDLES"
+resource_bundles_status = fetch_flag_statuses([resource_bundles_flag])[
+    resource_bundles_flag
+]
+
 app_source = datarobot.ApplicationSource(
     resource_name=f"[{PROJECT_NAME}]-app-source",
     name=f"[{PROJECT_NAME}]-app-source",
@@ -105,7 +111,9 @@ app_source = datarobot.ApplicationSource(
     base_environment_id=exe_env.id,
     base_environment_version_id=exe_env.version_id,
     resources=datarobot.ApplicationSourceResourcesArgs(
-        resource_label=CustomAppResourceBundles.CPU_XL.value.id,
+        resource_label=CustomAppResourceBundles.CPU_XL.value.id
+        if resource_bundles_status
+        else None,
         replicas=1,
         session_affinity=True,
         service_web_requests_on_root_path=True,
