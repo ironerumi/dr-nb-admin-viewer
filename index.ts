@@ -1,6 +1,6 @@
 import {
   fetchAllUseCases,
-  fetchAllNotebooksForUseCase,
+  fetchAllNotebooksForAllUseCases,
   DATAROBOT_HOST_BASE_URL,
   type Notebook,
   type UseCase,
@@ -81,7 +81,6 @@ async function fetchData() {
       };
     });
 
-    const useCaseIds = useCases.map(uc => uc.id);
     currentProgress = {
       ...currentProgress,
       phase: "fetchingNotebooks",
@@ -92,24 +91,18 @@ async function fetchData() {
       message: `ノートブックを ${useCases.length} 件のユースケースから取得中...`,
     };
 
-    const notebooks: Notebook[] = [];
-
-    for (const useCase of useCases) {
-      currentProgress = {
-        ...currentProgress,
-        currentUseCaseName: useCase.name,
-        message: `${useCase.name} のノートブックを取得中...`,
-      };
-
-      const notebooksForUseCase = await fetchAllNotebooksForUseCase(apiToken, useCase.id);
-      notebooks.push(...notebooksForUseCase);
-
-      currentProgress = {
-        ...currentProgress,
-        notebooksFetched: notebooks.length,
-        message: `${useCase.name} のノートブックを ${notebooksForUseCase.length} 件取得しました`,
-      };
-    }
+    const notebooks = await fetchAllNotebooksForAllUseCases(
+      apiToken,
+      useCases,
+      (useCaseName, notebooksCount, totalNotebooksFetched) => {
+        currentProgress = {
+          ...currentProgress,
+          currentUseCaseName: useCaseName,
+          notebooksFetched: totalNotebooksFetched,
+          message: `${useCaseName} のノートブックを ${notebooksCount} 件取得しました`,
+        };
+      }
+    );
 
     cachedData = {
       notebooks,
