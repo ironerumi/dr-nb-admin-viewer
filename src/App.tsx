@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { Notebook, NotebooksResponse } from "./types/notebook";
 import type { NotebooksProgress } from "./types/progress";
+import type { AdminMode, AccountProfile } from "./types/admin";
 import { NotebooksTable } from "./components/NotebooksTable";
 import { FilterCheckboxes, type FilterState } from "./components/FilterCheckboxes";
 import { CountDisplay } from "./components/CountDisplay";
@@ -22,6 +23,7 @@ export const App: React.FC = () => {
   const [codespaceCount, setCodespaceCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [progress, setProgress] = useState<NotebooksProgress | null>(null);
+  const [adminMode, setAdminMode] = useState<AdminMode>("unknown");
   const [filters, setFilters] = useState<FilterState>({
     codespaceOnly: false,
     oneMonthOld: false,
@@ -57,6 +59,7 @@ export const App: React.FC = () => {
       await pollProgress();
       startPolling();
       await fetchNotebooks();
+      await checkAdminStatus();
       await pollProgress();
       if (pollTimer !== null) {
         clearInterval(pollTimer);
@@ -73,6 +76,47 @@ export const App: React.FC = () => {
       }
     };
   }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      console.log(`Sending request to ${window.location.origin}/account/profile`);
+      const response = await fetch(`${window.location.origin}/account/profile`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch admin status:", response.status);
+        setAdminMode("unknown");
+        return;
+      }
+
+      const profile = await response.json() as AccountProfile;
+
+      if (!profile.final_access_levels || !Array.isArray(profile.final_access_levels)) {
+        console.warn("No access levels found in profile");
+        setAdminMode("unknown");
+        return;
+      }
+
+      const customAppAccess = profile.final_access_levels.find(
+        (level) => level.entity === "CUSTOM_APPLICATION"
+      );
+      const customAppSourceAccess = profile.final_access_levels.find(
+        (level) => level.entity === "CUSTOM_APPLICATION_SOURCE"
+      );
+
+      const isAdmin =
+        customAppAccess?.admin === true &&
+        customAppSourceAccess?.admin === true;
+
+      const mode = isAdmin ? "admin" : "user";
+      console.log(`Admin mode: ${mode}`);
+      setAdminMode(mode);
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setAdminMode("unknown");
+    }
+  };
 
   const fetchNotebooks = async () => {
     try {
@@ -232,6 +276,7 @@ export const App: React.FC = () => {
       <CountDisplay
         codespaceCount={codespaceCount}
         totalCount={totalCount}
+        adminMode={adminMode}
       />
 
       <FilterCheckboxes filters={filters} onChange={setFilters} />
